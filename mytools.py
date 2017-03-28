@@ -44,7 +44,7 @@ def files(directory):
 def write_table(dictionaries, cells, file_name):
     '''Create csv file with headers from a list of dictionaries.'''
     prepare_directory(file_name)
-    with open(file_name, 'w', encoding='utf-8') as csv_file:
+    with open(file_name, 'w', encoding='utf-8', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=cells)
         writer.writeheader()
         for dictionary in dictionaries:

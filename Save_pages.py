@@ -9,17 +9,23 @@ import urllib.request as rq
 
 import mytools
 
-def capture():
+data_dir = "data/"
+search_results_dir = data_dir + "search_results/"
+wine_data_dir = data_dir + "wine_data/"
+urls = data_dir + "urls.txt"
+wines_csv = 'vina.csv'
+max_page = 2
+
+# save search result pages 1 to max_page in directory
+def capture(directory):
     '''Zajame html-je strani s povezavami do podatkov o vinih.'''
     primary = 'http://www.winemag.com/ratings/'
     drink_type_and_rating = 's=&drink_type=wine&wine_type=Red&rating=94.0-97.99,98.0-\*'
     other_parameters = '&sort_by=retail&sort_dir=asc'
-    for page in range(1, 172):
+    for page in range(1, max_page):
         url = '{}?{}&page={}{}'.format(primary, drink_type_and_rating, page, other_parameters)
-        file = 'strani/{:003}.html'.format(page)
+        file = '{}{:003}.html'.format(directory, page)
         mytools.save(url, file)
-
-# capture()
 
 regex_url = re.compile(
     r'<a class=\"review-listing\" href=\"(?P<new_url>http:\/\/www\.winemag\.com\/buying-guide\/.*?)\" data-review-id=\"\d+?\">',
@@ -30,31 +36,30 @@ def clean_url(url):
     podatki['new_url'] = podatki['new_url'].strip()
     return podatki
 
+# extract urls from each search result page in directory, append them to `urls`
 def capture_urls(directory):
     '''Izloči podatke url-jev.'''
     i = 0
     for html_file in mytools.files(directory):
         for url in re.finditer(regex_url, mytools.file_contents(html_file)):
-            with open('../../Projektna naloga/urls.txt', 'a') as file:
+            with open(urls, 'a') as file:
                 podatek = clean_url(url)
                 file.write(podatek.get('new_url') + '\n')
                 i += 1
-            print(i)
+            print('From file {}, extracting url nr {}'.format(html_file, i))
 
-#capture_urls('../../Projektna naloga/strani')
+#captdata_dir/strani')
 
-def capture_wines():
+def capture_wines(directory):
     '''Zajame html-je strani s podatki o vinih.'''
-    with open('../../Projektna naloga/urls.txt', 'r') as f:
+    with open(urls, 'r') as f:
         i = 0
         for line in f:
             i += 1
             url = line
-            file = 'wine_data/data{:0004}.html'.format(i)
+            file = '{}/data{:0004}.html'.format(directory, i)
             mytools.save(url, file)
-            print(i)
-
-# capture_wines()
+            print('Saving details for wine {}'.format(i))
 
 regex_wine = re.compile(
     r'<div class=\"article-title\">(?P<title>.+?)<\/div>.*?'
@@ -81,14 +86,21 @@ def izloci_podatke_vin(imenik):
     vina = []
     i = 1
     for html_datoteka in mytools.files(imenik):
+        print('Parsing file {}'.format(html_datoteka))
         for vino in re.finditer(regex_wine, mytools.file_contents(html_datoteka)):
-            print(i)
+            print('Parsing wine nr {}'.format(i))
             vina.append(clean_wine(vino))
             i += 1
-        if i == 3:
+        if i == 30:
             return vina
+    return vina
 
-vina = izloci_podatke_vin('../../Projektna naloga/wine_data')
 
-mytools.write_table(vina, ['title', 'points', 'price', 'variety', 'country', 'alcohol', 'sommelier'], 'vina.csv')
 
+# capture(search_results_dir)
+# capture_urls(search_results_dir)
+# capture_wines(wine_data_dir)
+
+vina = izloci_podatke_vin(wine_data_dir)
+
+mytools.write_table(vina, ['title', 'points', 'price', 'variety', 'country', 'alcohol', 'sommelier'], wines_csv)
