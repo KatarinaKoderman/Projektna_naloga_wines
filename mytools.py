@@ -21,7 +21,7 @@ def save(url, file_name, enforce_transfer=False):
         if os.path.isfile(file_name) and not enforce_transfer:
             print('Already saved!')
             return
-        req = rq.Request(url, headers={'User-Agent' : "Magic Browser"})
+        req = rq.Request(url, headers={'User-Agent': "Magic Browser"})
         con = rq.urlopen(req)
     except ConnectionError:
         print("Page doesn't exist!")
