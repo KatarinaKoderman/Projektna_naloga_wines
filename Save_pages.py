@@ -79,7 +79,7 @@ regex_wine = re.compile(
     re.DOTALL)
 
   #  r'<div class=\"slug\">(?!Find Ratings)(?!What)(?:<\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>.*?)?.*?'
-regex_sommelier_only = re.compile('<div class=\"slug\"><\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>', flags=re.DOTALL)
+regex_sommelier_only = re.compile(r'<div class=\"slug\"><\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>', flags=re.DOTALL)
 
 regex_sommelier = re.compile(
     r'<div class=\"slug\"><\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>.*?'
