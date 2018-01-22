@@ -1,5 +1,15 @@
 import re
 import mytools
+import csv
+import requests
+import csv
+import os
+
+import re
+import sys
+import codecs
+import urllib.request as rq
+
 
 data_dir = "data/"  # ime mape z datotekami
 search_results_dir = data_dir + "search_results/"  # ime mape, ki vsebuje strani, na katerih so povezave do vin
@@ -175,3 +185,25 @@ polja_sommelier = ['sommelier', 'reviews']
 
 #mytools.write_table(vina, polja_vino, wines_csv)
 #mytools.write_table(sommelierji, polja_sommelier, sommeliers_csv)
+
+def precisti_podatke(input, output):
+    '''Prečisti podatke sommelierjev.'''
+    with open(input, 'r', encoding='utf-8') as csvinput:
+        mytools.prepare_directory(output)
+        with open(output, 'w', encoding='utf-8', newline='') as csvoutput:
+            writer = csv.DictWriter(csvoutput, fieldnames=['sommelier', 'reviews1', 'reviews2', 'reviews3'])
+            for row in csv.reader(csvinput):
+                if row[0] == 'sommelier':
+                    writer.writeheader()
+                else:
+                    countries = row[1].split(',')
+                    new_countries = []
+                    for country in countries:
+                        new = re.sub('\[|\]', '', country)
+                        new_countries.append(new)
+                    while len(new_countries) < 3:
+                        new_countries.append(None)
+                    dict = {'sommelier': row[0], 'reviews1': new_countries[0], 'reviews2': new_countries[1], 'reviews3': new_countries[2]}
+                    writer.writerow(dict)
+
+#precisti_podatke('sommelierji.csv', 'poskuševalci.csv')
