@@ -199,11 +199,13 @@ def precisti_podatke(input, output):
                     countries = row[1].split(',')
                     new_countries = []
                     for country in countries:
-                        new = re.sub('\[|\]', '', country)
+                        new = re.sub('\"|\'|\[|\]', '', country)
                         new_countries.append(new)
                     while len(new_countries) < 3:
                         new_countries.append(None)
-                    dict = {'sommelier': row[0], 'reviews1': new_countries[0], 'reviews2': new_countries[1], 'reviews3': new_countries[2]}
+                    dict = {'sommelier': row[0], 'reviews1': new_countries[0], 'reviews2': new_countries[1],
+                            'reviews3': new_countries[2]}
+                    print(dict)
                     writer.writerow(dict)
 
-#precisti_podatke('sommelierji.csv', 'poskuševalci.csv')
+precisti_podatke('sommelierji.csv', 'poskuševalci.csv')
