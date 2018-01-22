@@ -1,13 +1,4 @@
 import re
-import requests
-import sys
-import csv
-import os
-import sys
-import codecs
-import urllib.request as rq
-
-
 import mytools
 
 data_dir = "data/"  # ime mape z datotekami
@@ -16,7 +7,7 @@ wine_data_dir = data_dir + "wine_data/"  # ime mape, ki vsebuje strani posamezni
 urls = data_dir + "urls.txt"  # ime datoteke, ki vsebuje url-je do posameznih vin
 
 wines_csv = 'vina.csv'  # csv datoteka
-sommeliers_csv = 'somelierji.csv'
+sommeliers_csv = 'sommelierji.csv'
 max_page = 7619  # število strani, ki jih pregledamo; 12. 1. je bilo na voljo 7618 strani
 
 
@@ -24,10 +15,12 @@ max_page = 7619  # število strani, ki jih pregledamo; 12. 1. je bilo na voljo 7
 def capture(directory):
     '''Zajame html-je strani s povezavami do podatkov o vinih.'''
     primary = 'http://www.winemag.com/ratings/'
-    drink_type_and_rating = 's=&drink_type=wine&wine_type=Red,White&rating=98.0-*,94.0-97.99*' # Vzamemo rdeča in bela vina, ocenjena nad 94 točk.
-    ## Rdečih in belih vin ocenjenih nad 94.0 je bilo 8938. Če v url-ju karkoli spremenimo (npr. poskusimo namesto desc napisati asc, nam stran prikaže vsa vina
-    ## (op. nekatera celo podvojeno, kar je razvidno iz skupne številke vin). Ocena se tako pri zajemu podatkov ni upoštevala, ker pa so podatki že preneseni,
-    ## jih bom upoštevala še pri analizi.
+    drink_type_and_rating = 's=&drink_type=wine&wine_type=Red,White&rating=98.0-*,94.0-97.99*'
+    # Vzamemo rdeča in bela vina, ocenjena nad 94 točk.
+    # Rdečih in belih vin ocenjenih nad 94.0 je bilo 8938.
+    # Če v url-ju karkoli spremenimo (npr. poskusimo namesto desc napisati asc), nam stran prikaže vsa vina.
+    # Ocena in vrsta vina se tako pri zajemu podatkov nista upoštevali, ker pa so podatki že preneseni,
+    # jih bom upoštevala še pri analizi.
     other_parameters = '&sort_by=pub_date_web&sort_dir=desc'  # Če bi želeli osvežiti naše podatke, pregledamo kasneje dodana vina do tistega, s katerim smo tokrat začeli.
     for page in range(1, max_page):
         url = '{}?{}&page={}{}'.format(primary, drink_type_and_rating, page, other_parameters)
@@ -39,6 +32,7 @@ regex_url = re.compile(
     flags=re.DOTALL)
 
 def clean_url(url):
+    '''Počisti podatek o url-ju.'''
     podatki = url.groupdict()
     podatki['new_url'] = podatki['new_url'].strip()
     return podatki
@@ -68,6 +62,7 @@ def capture_wines(directory):
             mytools.save(url, file)
 
 regex_wine = re.compile(
+    r'data-review-id=\"(?P<id>\d+)\".*?'
     r'<div class=\"article-title\" style=\"padding-top: 20px;\">(?P<title>.+?)<\/div>.*?'
     r'<div class=\"rating\">.*?<span id=\"points\">(?P<points>\d+)<\/span>.*?<span id=\"points-label\">Points<\/span>.*?<span id=\"badges\">.*?'
     r'<p class=\"description\">(?P<wine_description>.*?)<\/p>.*?'
@@ -76,20 +71,21 @@ regex_wine = re.compile(
     r'<span>Alcohol<\/span>.*?<span><span>(?P<alcohol>.*?)%?<\/span><\/span>.*?'
     r'<span>Bottle Size<\/span>.*?<span><span>(?P<bottle_size>.*?[l|L])<\/span><\/span>.*?'
     r'<span>Category<\/span>.*?<span><span>(?P<category>Red|White|Sparkling|Rose|Dessert|Port|Sherry|Port\/Sherry|Fortified)<\/span><\/span>.*?',
-    re.DOTALL)
+    flags=re.DOTALL)
 
   #  r'<div class=\"slug\">(?!Find Ratings)(?!What)(?:<\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>.*?)?.*?'
 regex_sommelier_only = re.compile(r'<div class=\"slug\"><\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>', flags=re.DOTALL)
 
 regex_sommelier = re.compile(
     r'<div class=\"slug\"><\/div>.*?<div class=\"name\">(?P<sommelier>.*?)<\/div>.*?'
-    r'Reviews .*?(?P<reviews>[A-Z].*?)\.?'
-    r'<\/h4>(?P<sommelier_description>.*?)'
-    r'(?:<strong>|<\/span>).*?Email'
-    , re.DOTALL)
+    r'Reviews (?!by).*?(?P<reviews>[A-Z].*?)'
+    r'(?:(?:\.)|(?:<\/h4>)|(?:<\/div>)|(?:<\/b><\/span><\/p>))',
+    flags=re.DOTALL)
 
 def clean_wine(wine):
+    '''Počisti podatke o vinu.'''
     data = wine.groupdict()
+    data['id'] = int(data['id'])
     data['title'] = data['title'].strip()
     data['points'] = int(data['points'])
     data['wine_description'] = data['wine_description'].strip()
@@ -104,54 +100,66 @@ def clean_wine(wine):
         data['alcohol'] = float(data['alcohol'])
     data['bottle_size'] = data['bottle_size'].strip()
     data['category'] = data['category'].strip()
-    print(data.get('sommelier'))
     return data
 
 def clean_sommelier(sommelier):
+    '''Počisti podatka o sommelierju.'''
     data = sommelier.groupdict()
     data['sommelier'] = data['sommelier'].strip()
-    data['reviews'] = separate(data['reviews'].strip())
-    data['sommelier_description'] = data['sommelier_description'].strip()
+    data['reviews'] = separate(data['reviews'])
+    return data
 
 def separate(string):
-    '''Loči besede danega niza zgolj glede na presledke, pike, vejice.'''
+    '''Loči besedne zveze danega niza zgolj glede na pike, vejice in and.
+        Hkrati pobriše znake med znakoma < in >. Vrne seznam besed.'''
     word_list = []
     word = ''
-    for a in string: # a predstavlja črko niza
-        if a != ' ' or a != '.' or a != ',':
-            word = word + a
-        else:
-            word_list.append(word)
+    dolzina = len(string)
+    for i in range(dolzina):
+        if string[i] == ',':
+            word_list.append(word.strip())
             word = ''
-    word_list.append(word)
-    word_list = [w for w in word_list if w != 'and']
-    return word_list
+        elif string[i] == '<':
+            word_list.append(word.strip())
+            word = string[i]
+        elif string[i] == '>':
+            word = ''
+        elif '<' in word:
+            continue
+        else:
+            word += string[i]
+            if ' and' in word:
+                word = word[:-4]
+                word_list.append(word.strip())
+                word = ''
+            if word == ' other':
+                word = ''
+    word_list.append(word.strip())
+    words = [country for country in word_list if country != '']
+    return words
+
 
 def izloci_podatke(imenik):
+    '''Izloči podatke o vinih in sommelierjih.'''
     vina = []
     sommelierji = []
     i = 1
     for html_datoteka in mytools.files(imenik):
-        print('Parsing file {}'.format(html_datoteka))
-        ujemanje = regex_sommelier_only.search(html_datoteka)
-        print(ujemanje)
+        print('Parsing file {}, parsing wine nr {}'.format(html_datoteka, i))
+        ujemanje = regex_sommelier_only.search(mytools.file_contents(html_datoteka))
         if ujemanje:
-            som = ujemanje.groupdict()
-            som['sommelier'] = som['sommelier'].strip()
             for vino in re.finditer(regex_wine, mytools.file_contents(html_datoteka)):
-                print('Parsing wine nr {}'.format(i))
                 clean = clean_wine(vino)
-                clean['sommelier'] = som['sommelier']
-                vina.append(clean)
                 for taster in re.finditer(regex_sommelier, mytools.file_contents(html_datoteka)):
-                    sommelierji.append(clean_sommelier(taster))
-                    print(len(sommelierji))
+                    clean_taster = clean_sommelier(taster)
+                    sommelierji.append(clean_taster)
+                    clean['sommelier'] = clean_taster['sommelier']
+                vina.append(clean)
         else:
             for vino in re.finditer(regex_wine, mytools.file_contents(html_datoteka)):
-                print('Parsing wine nr {}, ni tasterja'.format(i))
-                new_match = clean_wine(vino)
-                new_match['sommelier'] = None
-                vina.append(new_match)
+                clean = clean_wine(vino)
+                clean['sommelier'] = None
+                vina.append(clean)
         i += 1
     return (vina, sommelierji)
 
@@ -159,14 +167,11 @@ def izloci_podatke(imenik):
 #capture_urls(search_results_dir)
 #capture_wines(wine_data_dir)
 
+#(vina, sommelierji) = izloci_podatke(wine_data_dir)
 
-(vina, sommelierji) = izloci_podatke(wine_data_dir)
-
-polja_vino = ['title', 'points', 'wine_descripton', 'price', 'country',
+polja_vino = ['id', 'title', 'points', 'wine_description', 'price', 'country',
          'alcohol', 'bottle_size', 'category', 'sommelier']
-polja_sommelier = ['sommelier', 'reviews', 'sommelier_description']
-
+polja_sommelier = ['sommelier', 'reviews']
 
 #mytools.write_table(vina, polja_vino, wines_csv)
-#mytools.write_table(sommerierji, polja_sommelier, sommerliers_csv)
-
+#mytools.write_table(sommelierji, polja_sommelier, sommeliers_csv)
