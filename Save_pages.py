@@ -186,26 +186,62 @@ polja_sommelier = ['sommelier', 'reviews']
 #mytools.write_table(vina, polja_vino, wines_csv)
 #mytools.write_table(sommelierji, polja_sommelier, sommeliers_csv)
 
-def precisti_podatke(input, output):
-    '''Prečisti podatke sommelierjev.'''
+def precisti_bottles(input, output):
+    '''Prečisti podatke velikosti steklenic.'''
     with open(input, 'r', encoding='utf-8') as csvinput:
         mytools.prepare_directory(output)
         with open(output, 'w', encoding='utf-8', newline='') as csvoutput:
-            writer = csv.DictWriter(csvoutput, fieldnames=['sommelier', 'reviews1', 'reviews2', 'reviews3'])
+            writer = csv.DictWriter(csvoutput, fieldnames=polja_vino)
+            for row in csv.reader(csvinput):
+                if row[0] == 'id':
+                    writer.writeheader()
+                else:
+                    size = row[7]
+                    if size == '1.5 L' or size == '1.5L':
+                        row[7] = '1500 ml'
+                    elif size == '1 L' or size == '1L':
+                        row[7] = '1000 ml'
+                    elif size == '3 L' or size == '3L':
+                        row[7] = '3000 ml'
+                    elif size == '375ML':
+                        row[7] = '375 ml'
+                    elif size == '500ML':
+                        row[7] = '500 ml'
+                    elif size == '750ML':
+                        row[7] = '750 ml'
+                    dict = {}
+                    for i in range(len(polja_vino)):
+                        dict[polja_vino[i]] = row[i]
+                    writer.writerow(dict)
+
+#precisti_bottles('vina.csv', 'vina1.csv')
+
+def uredi_drzavo(input, output):
+    '''Uredi državo v csv datoteki.'''
+    with open(input, 'r', encoding='utf-8') as csvinput:
+        mytools.prepare_directory(output)
+        with open(output, 'w', encoding='utf-8', newline='') as csvoutput:
+            writer = csv.DictWriter(csvoutput, fieldnames=polja_vino)
             for row in csv.reader(csvinput):
                 if row[0] == 'sommelier':
                     writer.writeheader()
                 else:
-                    countries = row[1].split(',')
-                    new_countries = []
-                    for country in countries:
-                        new = re.sub('\"|\'|\[|\]', '', country)
-                        new_countries.append(new)
-                    while len(new_countries) < 3:
-                        new_countries.append(None)
-                    dict = {'sommelier': row[0], 'reviews1': new_countries[0], 'reviews2': new_countries[1],
-                            'reviews3': new_countries[2]}
-                    print(dict)
+                    drzava = row[5]
+                    if drzava == 'Deux C':
+                        row[5] = 'US'
+                    elif drzava == 'Malbec':
+                        row[5] = 'France'
+                    elif drzava == 'Red Blend' or drzava == 'Cabernet Franc' or drzava == 'Cabernet Sauvignon':
+                        row[5] = None
+                    elif drzava == 'Castelvecchio':
+                        row[5] = 'Italy'
+                    elif drzava == 'Brkic':
+                        row[5] = 'Bosnia and Herzegovina'
+                    elif drzava == 'Stone Castle':
+                        row[5] = 'Kosovo'
+                    dict = {}
+                    for i in range(len(polja_vino)):
+                        dict[polja_vino[i]] = row[i]
                     writer.writerow(dict)
 
-precisti_podatke('sommelierji.csv', 'poskuševalci.csv')
+# uredi_drzavo('wines.csv', 'vina.csv')
