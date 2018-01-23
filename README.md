@@ -32,7 +32,7 @@ Ravno tako bi lahko zajeli tudi elektronski naslov, zatorej če bi želeli kater
 ## Analiza
 
 Predvidena analiza:
-- razporeditev vin po kategorijah
-- odvisnot cene od vsebnosti alkohola
-- odvisnost cene, vsebnosti alkohola od kategorije vina
-- zastopanost vin po državah in povprečne vrednosti po državah, uvrstitev Slovenije
+- razporeditev vin po kategorijah,
+- odvisnot cene od vsebnosti alkohola,
+- odvisnost cene, vsebnosti alkohola od kategorije vina,
+- zastopanost vin po državah in povprečne vrednosti po državah, uvrstitev Slovenije.
